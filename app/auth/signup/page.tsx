@@ -41,6 +41,15 @@ export default function SignUpPage() {
       return
     }
 
+    if (formData.password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      })
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -53,6 +62,9 @@ export default function SignUpPage() {
       if (authError) throw authError
 
       if (authData.user) {
+        // Wait a moment for the user to be fully created
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
         // Insert store owner details
         const { error: insertError } = await supabase.from("store_owners").insert({
           id: authData.user.id,
@@ -63,16 +75,20 @@ export default function SignUpPage() {
           address: formData.address,
         })
 
-        if (insertError) throw insertError
+        if (insertError) {
+          console.error("Insert error:", insertError)
+          throw insertError
+        }
 
         toast({
           title: "Success!",
-          description: "Account created successfully. Please check your email to verify your account.",
+          description: "Account created successfully. You can now sign in.",
         })
 
         router.push("/auth/login")
       }
     } catch (error: any) {
+      console.error("Signup error:", error)
       toast({
         title: "Error",
         description: error.message || "Failed to create account",
@@ -143,6 +159,7 @@ export default function SignUpPage() {
                 value={formData.password}
                 onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                 required
+                minLength={6}
               />
             </div>
 
@@ -154,6 +171,7 @@ export default function SignUpPage() {
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
                 required
+                minLength={6}
               />
             </div>
 
