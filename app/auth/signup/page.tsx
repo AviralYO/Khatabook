@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Logo } from "@/components/logo"
 import { getSupabaseClient } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Mail } from "lucide-react"
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -25,9 +27,16 @@ export default function SignUpPage() {
     address: "",
   })
   const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
   const supabase = getSupabaseClient()
+
+  // Fix hydration issues
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,45 +62,79 @@ export default function SignUpPage() {
     setLoading(true)
 
     try {
-      // Sign up with Supabase Auth
+      console.log("🚀 Starting signup process...")
+
+      // Step 1: Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       })
 
-      if (authError) throw authError
+      console.log("✅ Auth response:", {
+        user: authData.user?.id,
+        session: !!authData.session,
+        error: authError?.message,
+      })
 
-      if (authData.user) {
-        // Wait a moment for the user to be fully created
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+      if (authError) {
+        throw new Error(`Authentication failed: ${authError.message}`)
+      }
 
-        // Insert store owner details
-        const { error: insertError } = await supabase.from("store_owners").insert({
+      if (!authData.user) {
+        throw new Error("No user returned from authentication")
+      }
+
+      // Check if user needs email confirmation
+      if (!authData.session && authData.user && !authData.user.email_confirmed_at) {
+        console.log("📧 Email confirmation required")
+        setShowEmailConfirmation(true)
+        toast({
+          title: "Check your email!",
+          description:
+            "We've sent you a confirmation link. Please check your email and click the link to activate your account.",
+        })
+        return
+      }
+
+      // If we have a session, the user is confirmed and we can proceed
+      if (authData.session) {
+        // Step 2: Insert store owner details
+        const insertData = {
           id: authData.user.id,
           email: formData.email,
           store_name: formData.storeName,
           owner_name: formData.ownerName,
-          phone: formData.phone,
-          address: formData.address,
-        })
+          phone: formData.phone || null,
+          address: formData.address || null,
+        }
+
+        console.log("📝 Inserting store owner data:", insertData)
+
+        const { error: insertError } = await supabase.from("store_owners").insert(insertData)
 
         if (insertError) {
-          console.error("Insert error:", insertError)
-          throw insertError
+          console.error("❌ Insert error:", insertError)
+          throw new Error(`Database error: ${insertError.message}`)
         }
+
+        console.log("🎉 Account created successfully!")
 
         toast({
           title: "Success!",
-          description: "Account created successfully. You can now sign in.",
+          description: "Account created successfully. You are now logged in.",
         })
 
-        router.push("/auth/login")
+        router.push("/dashboard")
       }
     } catch (error: any) {
-      console.error("Signup error:", error)
+      console.error("💥 Signup failed:", error)
+
       toast({
         title: "Error",
-        description: error.message || "Failed to create account",
+        description: error.message || "Failed to create account. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -99,8 +142,65 @@ export default function SignUpPage() {
     }
   }
 
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return null
+  }
+
+  if (showEmailConfirmation) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <Logo className="justify-center mb-4" />
+            <CardTitle className="text-2xl">Check Your Email</CardTitle>
+            <CardDescription>We've sent you a confirmation link</CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="flex justify-center">
+              <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
+                <Mail className="h-8 w-8 text-blue-600" />
+              </div>
+            </div>
+            <Alert>
+              <AlertDescription>
+                We've sent a confirmation email to <strong>{formData.email}</strong>. Please check your inbox and click
+                the confirmation link to activate your account.
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                After confirming your email, you can{" "}
+                <Link href="/auth/login" className="text-blue-600 hover:underline">
+                  sign in here
+                </Link>
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEmailConfirmation(false)
+                  setFormData({
+                    email: "",
+                    password: "",
+                    confirmPassword: "",
+                    storeName: "",
+                    ownerName: "",
+                    phone: "",
+                    address: "",
+                  })
+                }}
+              >
+                Back to Sign Up
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background" suppressHydrationWarning>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Logo className="justify-center mb-4" />
@@ -108,7 +208,7 @@ export default function SignUpPage() {
           <CardDescription>Join thousands of store owners managing their business digitally</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ownerName">Owner Name</Label>

@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Logo } from "@/components/logo"
 import { getSupabaseClient } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Mail } from "lucide-react"
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -28,19 +30,32 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       })
 
-      if (error) throw error
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          toast({
+            title: "Email not confirmed",
+            description: "Please check your email and click the confirmation link before signing in.",
+            variant: "destructive",
+          })
+        } else {
+          throw error
+        }
+        return
+      }
 
-      toast({
-        title: "Welcome back!",
-        description: "Successfully logged in to your account.",
-      })
+      if (data.user) {
+        toast({
+          title: "Welcome back!",
+          description: "Successfully logged in to your account.",
+        })
 
-      router.push("/dashboard")
+        router.push("/dashboard")
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -61,6 +76,14 @@ export default function LoginPage() {
           <CardDescription>Sign in to your store account</CardDescription>
         </CardHeader>
         <CardContent>
+          <Alert className="mb-4">
+            <Mail className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Note:</strong> If you just signed up, please check your email and click the confirmation link
+              before trying to log in.
+            </AlertDescription>
+          </Alert>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
