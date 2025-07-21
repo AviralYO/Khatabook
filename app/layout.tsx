@@ -5,7 +5,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
-import { Sidebar } from "@/components/sidebar"
+import { Sidebar } from "@/components/ui/sidebar"
 import { usePathname } from "next/navigation"
 
 const inter = Inter({ subsets: ["latin"] })
