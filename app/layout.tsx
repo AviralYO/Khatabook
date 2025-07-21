@@ -29,14 +29,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SidebarProvider>
+         
             <div className="flex min-h-screen">
               {showSidebar && <Sidebar />}
               <main className="flex-1 p-4 sm:p-6 lg:p-8 sm:ml-14">
                 {children}
               </main>
             </div>
-          </SidebarProvider>
+          
           <Toaster />
         </ThemeProvider>
       </body>
