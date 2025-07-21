@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { Sidebar } from "@/components/ui/sidebar"
 import { usePathname } from "next/navigation"
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -28,12 +29,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex min-h-screen">
-            {showSidebar && <Sidebar />}
-            <main className="flex-1 p-4 sm:p-6 lg:p-8 sm:ml-14">
-              {children}
-            </main>
-          </div>
+          <SidebarProvider>
+            <div className="flex min-h-screen">
+              {showSidebar && <Sidebar />}
+              <main className="flex-1 p-4 sm:p-6 lg:p-8 sm:ml-14">
+                {children}
+              </main>
+            </div>
+          </SidebarProvider>
           <Toaster />
         </ThemeProvider>
       </body>
