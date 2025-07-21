@@ -2,7 +2,6 @@
 CREATE TABLE IF NOT EXISTS store_owners (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
   store_name VARCHAR(255) NOT NULL,
   owner_name VARCHAR(255) NOT NULL,
   phone VARCHAR(20),
