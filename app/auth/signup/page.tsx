@@ -64,63 +64,34 @@ export default function SignUpPage() {
     try {
       console.log("🚀 Starting signup process...")
 
-      // Step 1: Sign up with Supabase Auth
+      // Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
       })
 
-      console.log("✅ Auth response:", {
-        user: authData.user?.id,
-        session: !!authData.session,
-        error: authError?.message,
-      })
+      if (authError) throw authError
 
-      if (authError) {
-        throw new Error(`Authentication failed: ${authError.message}`)
-      }
-
-      if (!authData.user) {
-        throw new Error("No user returned from authentication")
-      }
-
-      // Check if user needs email confirmation
-      if (!authData.session && authData.user && !authData.user.email_confirmed_at) {
-        console.log("📧 Email confirmation required")
-        setShowEmailConfirmation(true)
-        toast({
-          title: "Check your email!",
-          description:
-            "We've sent you a confirmation link. Please check your email and click the link to activate your account.",
+      if (authData.user) {
+        // Sign in the user to create a session
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
         })
-        return
-      }
 
-      // If we have a session, the user is confirmed and we can proceed
-      if (authData.session) {
-        // Step 2: Insert store owner details
-        const insertData = {
+        if (signInError) throw signInError
+        
+        // Insert store owner details
+        const { error: insertError } = await supabase.from("store_owners").insert({
           id: authData.user.id,
           email: formData.email,
           store_name: formData.storeName,
           owner_name: formData.ownerName,
-          phone: formData.phone || null,
-          address: formData.address || null,
-        }
+          phone: formData.phone,
+          address: formData.address,
+        })
 
-        console.log("📝 Inserting store owner data:", insertData)
-
-        const { error: insertError } = await supabase.from("store_owners").insert(insertData)
-
-        if (insertError) {
-          console.error("❌ Insert error:", insertError)
-          throw new Error(`Database error: ${insertError.message}`)
-        }
-
-        console.log("🎉 Account created successfully!")
+        if (insertError) throw insertError
 
         toast({
           title: "Success!",
