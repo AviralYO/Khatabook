@@ -73,15 +73,9 @@ export default function SignUpPage() {
       if (authError) throw authError
 
       if (authData.user) {
-        // Sign in the user to create a session
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        })
-
-        if (signInError) throw signInError
+        console.log("✅ User created with ID:", authData.user.id)
         
-        // Insert store owner details
+        // Insert store owner details with the correct user ID
         const { error: insertError } = await supabase.from("store_owners").insert({
           id: authData.user.id,
           email: formData.email,
@@ -91,7 +85,25 @@ export default function SignUpPage() {
           address: formData.address,
         })
 
-        if (insertError) throw insertError
+        if (insertError) {
+          console.error("❌ Failed to insert store owner:", insertError)
+          throw insertError
+        }
+
+        console.log("✅ Store owner profile created successfully")
+
+        // Now sign in the user to create a session
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        })
+
+        if (signInError) {
+          console.error("❌ Failed to sign in after signup:", signInError)
+          throw signInError
+        }
+
+        console.log("✅ User signed in successfully")
 
         toast({
           title: "Success!",

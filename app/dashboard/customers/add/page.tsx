@@ -36,9 +36,31 @@ export default function AddCustomerPage() {
       } = await supabase.auth.getUser()
 
       if (!user) {
+        console.error("❌ No authenticated user found")
         router.push("/auth/login")
         return
       }
+
+      console.log("✅ Authenticated user ID:", user.id)
+
+      // Verify that the store owner exists
+      const { data: storeOwner, error: storeOwnerError } = await supabase
+        .from("store_owners")
+        .select("id")
+        .eq("id", user.id)
+        .single()
+
+      if (storeOwnerError || !storeOwner) {
+        console.error("❌ Store owner not found:", storeOwnerError)
+        toast({
+          title: "Error",
+          description: "Your store profile is not properly set up. Please contact support.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      console.log("✅ Store owner verified:", storeOwner.id)
 
       const { error } = await supabase.from("customers").insert({
         store_owner_id: user.id,
@@ -48,7 +70,12 @@ export default function AddCustomerPage() {
         total_balance: 0,
       })
 
-      if (error) throw error
+      if (error) {
+        console.error("❌ Failed to insert customer:", error)
+        throw error
+      }
+
+      console.log("✅ Customer added successfully")
 
       toast({
         title: "Success!",
@@ -57,6 +84,7 @@ export default function AddCustomerPage() {
 
       router.push("/dashboard/customers")
     } catch (error: any) {
+      console.error("💥 Add customer failed:", error)
       toast({
         title: "Error",
         description: error.message || "Failed to add customer",
