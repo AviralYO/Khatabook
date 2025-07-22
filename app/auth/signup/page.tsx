@@ -75,6 +75,9 @@ export default function SignUpPage() {
       if (authData.user) {
         console.log("✅ User created with ID:", authData.user.id)
         
+        // Wait a moment for the auth session to be fully established
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
         // Insert store owner details with the correct user ID
         const { error: insertError } = await supabase.from("store_owners").insert({
           id: authData.user.id,
@@ -92,25 +95,13 @@ export default function SignUpPage() {
 
         console.log("✅ Store owner profile created successfully")
 
-        // Now sign in the user to create a session
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        })
-
-        if (signInError) {
-          console.error("❌ Failed to sign in after signup:", signInError)
-          throw signInError
-        }
-
-        console.log("✅ User signed in successfully")
-
         toast({
           title: "Success!",
-          description: "Account created successfully. You are now logged in.",
+          description: "Account created successfully. Please check your email to confirm your account, then sign in.",
         })
 
-        router.push("/dashboard")
+        // Show email confirmation screen instead of auto-login
+        setShowEmailConfirmation(true)
       }
     } catch (error: any) {
       console.error("💥 Signup failed:", error)
