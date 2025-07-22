@@ -68,36 +68,25 @@ export default function SignUpPage() {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          data: {
+            store_name: formData.storeName,
+            owner_name: formData.ownerName,
+            phone: formData.phone,
+            address: formData.address,
+          }
+        }
       })
 
       if (authError) throw authError
 
       if (authData.user) {
         console.log("✅ User created with ID:", authData.user.id)
-        
-        // Wait a moment for the auth session to be fully established
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Insert store owner details with the correct user ID
-        const { error: insertError } = await supabase.from("store_owners").insert({
-          id: authData.user.id,
-          email: formData.email,
-          store_name: formData.storeName,
-          owner_name: formData.ownerName,
-          phone: formData.phone,
-          address: formData.address,
-        })
-
-        if (insertError) {
-          console.error("❌ Failed to insert store owner:", insertError)
-          throw insertError
-        }
-
-        console.log("✅ Store owner profile created successfully")
+        console.log("✅ User metadata stored:", authData.user.user_metadata)
 
         toast({
           title: "Success!",
-          description: "Account created successfully. Please check your email to confirm your account, then sign in.",
+          description: "Account created successfully. Please check your email to confirm your account.",
         })
 
         // Show email confirmation screen instead of auto-login
